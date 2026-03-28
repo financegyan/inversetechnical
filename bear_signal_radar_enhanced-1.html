@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SC250 Bear Signal Radar — Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap');
+/* Fallback numeric font stack for Chrome/Edge compatibility */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+/* Fallback numeric font stack for Chrome/Edge compatibility */
+body{background:#f8fafc;color:#1e293b;font-family:'DM Sans',system-ui,-apple-system,sans-serif;min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 70% 50% at 15% 0%,rgba(59,130,246,.06) 0%,transparent 60%),radial-gradient(ellipse 50% 70% at 85% 100%,rgba(16,185,129,.05) 0%,transparent 60%);pointer-events:none}
+.prog-bar{position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,#3b82f6,#10b981);transition:width .4s ease;z-index:200;width:0%}
+nav{border-bottom:1px solid #e2e8f0;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:rgba(248,250,252,.95);backdrop-filter:blur(12px);z-index:100}
+.nav-brand{font-family:'Syne','Georgia',serif;font-size:17px;font-weight:800;color:#0f172a}
+.nav-brand span{color:#10b981}
+.nav-tag{font-family:'DM Mono','Courier New',monospace;font-size:8px;letter-spacing:2px;color:#94a3b8;text-transform:uppercase}
+.demo-badge{font-family:'DM Mono','Courier New',monospace;font-size:8px;letter-spacing:2px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);color:#ef4444;padding:4px 10px;border-radius:4px;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
+.scene{display:none;padding:0 16px 40px;max-width:900px;margin:0 auto;animation:fadeIn .5s ease}
+.scene.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+.scene-nav{display:flex;justify-content:center;gap:8px;padding:18px 0 6px;flex-wrap:wrap}
+.sdot{width:28px;height:4px;border-radius:2px;background:#e2e8f0;cursor:pointer;transition:all .3s}
+.sdot.active{background:#3b82f6;width:36px}
+.sdot.done{background:#10b981}
+.scene-label{text-align:center;font-family:'DM Mono','Courier New',monospace;font-size:9px;letter-spacing:3px;color:#3b82f6;text-transform:uppercase;padding:10px 0 24px}
+.ctrl{display:flex;align-items:center;justify-content:center;gap:12px;padding:24px 16px 8px;flex-wrap:wrap}
+.cbtn{font-family:'DM Mono','Courier New',monospace;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;border-radius:7px;padding:10px 20px;cursor:pointer;border:1px solid #e2e8f0;background:#fff;color:#64748b;transition:all .2s}
+.cbtn:hover{border-color:#cbd5e1;color:#1e293b}
+.cbtn.primary{background:linear-gradient(135deg,#3b82f6,#2563eb);border-color:#3b82f6;color:#fff;font-weight:600}
+.cbtn:disabled{opacity:.35;cursor:not-allowed}
+.auto-btn{background:rgba(16,185,129,.08);border-color:rgba(16,185,129,.3);color:#10b981}
+.auto-btn.playing{background:rgba(239,68,68,.08);border-color:rgba(239,68,68,.3);color:#ef4444}
+
+/* S1 */
+.intro-wrap{text-align:center;padding:40px 20px}
+.intro-eyebrow{font-family:'DM Mono','Courier New',monospace;font-size:9px;letter-spacing:3px;color:#3b82f6;text-transform:uppercase;margin-bottom:16px;display:flex;align-items:center;justify-content:center;gap:10px}
+.intro-eyebrow::before,.intro-eyebrow::after{content:'';width:30px;height:1px;background:#3b82f6}
+.intro-h1{font-family:'Syne','Georgia',serif;font-size:clamp(36px,8vw,72px);font-weight:800;line-height:1.05;letter-spacing:-2px;color:#0f172a;margin-bottom:12px}
+.intro-h1 em{font-style:normal;color:#10b981}
+.intro-sub{font-size:13px;color:#94a3b8;max-width:460px;margin:0 auto 36px;line-height:1.8;font-weight:300}
+.stat-row{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin-bottom:36px}
+.istat{background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:16px 22px;text-align:center;min-width:110px;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.istat-num{font-family:'Syne','Georgia',serif;font-size:28px;font-weight:800;line-height:1;margin-bottom:4px}
+.istat-lbl{font-family:'DM Mono','Courier New',monospace;font-size:7px;letter-spacing:1px;color:#94a3b8;text-transform:uppercase;line-height:1.5}
+.scroll-hint{font-family:'DM Mono','Courier New',monospace;font-size:8px;letter-spacing:2px;color:#cbd5e1;animation:bounce 2s infinite}
+@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(4px)}}
+
+/* S2 */
+.problem-wrap{padding:30px 0}
+.prob-head{font-family:'Syne','Georgia',serif;font-size:clamp(22px,5vw,40px);font-weight:800;color:#0f172a;text-align:center;margin-bottom:8px;letter-spacing:-1px}
+.prob-sub{text-align:center;color:#94a3b8;font-size:13px;margin-bottom:32px}
+.prob-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:28px}
+.pcard{background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:18px;position:relative;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.pcard::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--c)}
+.pcard-icon{font-size:24px;margin-bottom:10px}
+.pcard-title{font-family:'Syne','Georgia',serif;font-size:14px;font-weight:700;color:#0f172a;margin-bottom:6px}
+.pcard-txt{font-size:11px;color:#94a3b8;line-height:1.6}
+.arrow-down{text-align:center;font-size:28px;color:#e2e8f0;margin:16px 0}
+.solution-box{background:rgba(16,185,129,.05);border:1px solid rgba(16,185,129,.2);border-radius:10px;padding:20px;text-align:center}
+.sol-title{font-family:'Syne','Georgia',serif;font-size:18px;font-weight:800;color:#10b981;margin-bottom:6px}
+.sol-txt{font-size:12px;color:#64748b;line-height:1.7}
+
+/* S3 */
+.how-wrap{padding:30px 0}
+.how-head{font-family:'Syne','Georgia',serif;font-size:clamp(22px,5vw,38px);font-weight:800;color:#0f172a;text-align:center;margin-bottom:8px;letter-spacing:-1px}
+.how-sub{text-align:center;color:#94a3b8;font-size:12px;margin-bottom:28px}
+.indicators{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:24px}
+@media(max-width:500px){.indicators{grid-template-columns:1fr}}
+.ind-card{background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:16px;position:relative;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.ind-accent{position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--c)}
+.ind-num{font-family:'DM Mono','Courier New',monospace;font-size:8px;color:var(--c);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px}
+.ind-name{font-family:'Syne','Georgia',serif;font-size:13px;font-weight:700;color:#0f172a;margin-bottom:6px}
+.ind-where{font-family:'DM Mono','Courier New',monospace;font-size:8px;color:#94a3b8;margin-bottom:10px;line-height:1.6}
+.ind-bar-wrap{height:4px;background:#f1f5f9;border-radius:2px;overflow:hidden;margin-bottom:6px}
+.ind-bar{height:100%;border-radius:2px;background:var(--c);width:0;transition:width 1.2s cubic-bezier(.4,0,.2,1)}
+.ind-range{display:flex;justify-content:space-between;font-family:'DM Mono','Courier New',monospace;font-size:7px;color:#cbd5e1}
+.formula-box{background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:20px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.formula-lbl{font-family:'DM Mono','Courier New',monospace;font-size:8px;letter-spacing:2px;color:#3b82f6;text-transform:uppercase;margin-bottom:10px}
+.formula{font-family:'DM Mono','Courier New',monospace;font-size:clamp(11px,2.5vw,14px);color:#1e293b;line-height:2}
+.formula span{color:#10b981;font-weight:600}
+
+/* S4 */
+.demo-wrap{padding:20px 0}
+.demo-head{font-family:'Syne','Georgia',serif;font-size:clamp(20px,4vw,36px);font-weight:800;color:#0f172a;text-align:center;margin-bottom:4px;letter-spacing:-1px}
+.demo-sub{text-align:center;color:#94a3b8;font-size:12px;margin-bottom:24px}
+.demo-date{font-family:'DM Mono','Courier New',monospace;font-size:8px;letter-spacing:2px;color:#10b981;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);padding:4px 12px;border-radius:4px;display:inline-block;margin-bottom:20px}
+.live-inputs{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px}
+@media(max-width:580px){.live-inputs{grid-template-columns:1fr 1fr}}
+.li-card{background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:14px;position:relative;overflow:hidden;transition:border-color .4s,box-shadow .4s;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.li-card.typing{border-color:var(--c);box-shadow:0 0 0 3px color-mix(in srgb,var(--c) 12%,transparent)}
+.li-accent{position:absolute;bottom:0;left:0;right:0;height:2px;background:var(--c);transform:scaleX(0);transition:transform .4s;transform-origin:left}
+.li-card.typing .li-accent{transform:scaleX(1)}
+.li-lbl{font-family:'DM Mono','Courier New',monospace;font-size:7px;letter-spacing:1.5px;color:#94a3b8;text-transform:uppercase;margin-bottom:3px}
+.li-name{font-family:'Syne','Georgia',serif;font-size:11px;font-weight:700;color:#0f172a;margin-bottom:10px;line-height:1.3}
+.li-val{font-family:'DM Mono','Courier New',monospace;font-size:26px;font-weight:600;color:var(--c);line-height:1;min-height:32px}
+.li-unit{font-family:'DM Mono','Courier New',monospace;font-size:9px;color:#94a3b8;margin-top:4px}
+.cursor{display:inline-block;width:2px;height:22px;background:var(--c);margin-left:2px;animation:blink .7s infinite;vertical-align:middle}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+.score-reveal{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:24px;opacity:0;transform:translateY(16px);transition:opacity .6s,transform .6s,border-color .5s,box-shadow .5s;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.score-reveal.show{opacity:1;transform:translateY(0)}
+.sr-inner{display:grid;grid-template-columns:120px 1fr;gap:24px;align-items:center}
+@media(max-width:480px){.sr-inner{grid-template-columns:1fr;text-align:center}}
+.ring-wrap{position:relative;width:120px;height:120px;margin:0 auto}
+.ring-wrap svg{width:100%;height:100%;transform:rotate(-90deg)}
+.r-track{fill:none;stroke:#f1f5f9;stroke-width:9}
+.r-fill{fill:none;stroke-width:9;stroke-linecap:round;transition:stroke-dashoffset 1.2s cubic-bezier(.4,0,.2,1),stroke .5s;stroke-dasharray:301.6;stroke-dashoffset:301.6}
+.r-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.r-num{font-family:'Syne','Georgia',serif;font-size:36px;font-weight:800;line-height:1}
+.r-denom{font-family:'DM Mono','Courier New',monospace;font-size:8px;color:#94a3b8}
+.sr-label{font-family:'Syne','Georgia',serif;font-size:clamp(18px,4vw,30px);font-weight:800;letter-spacing:-1px;margin-bottom:8px}
+.sr-desc{font-size:11px;color:#64748b;line-height:1.7;margin-bottom:14px}
+.sr-bars{display:flex;flex-direction:column;gap:6px}
+.srb{display:flex;align-items:center;gap:8px}
+.srb-lbl{font-family:'DM Mono','Courier New',monospace;font-size:7px;color:#94a3b8;width:64px;flex-shrink:0}
+.srb-track{flex:1;height:4px;background:#f1f5f9;border-radius:2px;overflow:hidden}
+.srb-fill{height:100%;border-radius:2px;width:0;transition:width .9s cubic-bezier(.4,0,.2,1) var(--d,0s)}
+.srb-val{font-family:'DM Mono','Courier New',monospace;font-size:8px;width:32px;text-align:right}
+
+/* S5 */
+.bt-wrap{padding:20px 0}
+.bt-head{font-family:'Syne','Georgia',serif;font-size:clamp(22px,5vw,38px);font-weight:800;color:#0f172a;text-align:center;margin-bottom:4px;letter-spacing:-1px}
+.bt-sub{text-align:center;color:#94a3b8;font-size:12px;margin-bottom:24px}
+.bt-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px}
+@media(max-width:480px){.bt-stats{grid-template-columns:repeat(2,1fr)}}
+.bts{background:#fff;border:1px solid #e2e8f0;border-radius:9px;padding:14px;text-align:center;position:relative;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.bts::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--c)}
+.bts-num{font-family:'Syne','Georgia',serif;font-size:clamp(20px,5vw,28px);font-weight:800;color:var(--c);line-height:1;margin-bottom:4px}
+.bts-lbl{font-family:'DM Mono','Courier New',monospace;font-size:7px;letter-spacing:1px;color:#94a3b8;text-transform:uppercase;line-height:1.5}
+.bt-timeline{display:flex;flex-direction:column}
+.btrow{display:flex;align-items:center;opacity:0;transform:translateX(-20px);transition:opacity .4s,transform .4s}
+.btrow.show{opacity:1;transform:translateX(0)}
+.bt-yr{font-family:'DM Mono','Courier New',monospace;font-size:9px;color:#94a3b8;width:52px;flex-shrink:0;text-align:right;padding-right:12px}
+.bt-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.bt-connector{width:1px;height:32px;background:#e2e8f0;margin:0 auto;display:block}
+.bt-content{background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:10px 14px;margin-left:12px;flex:1;display:flex;align-items:center;gap:12px;flex-wrap:wrap;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.bt-event{font-size:11px;font-weight:600;color:#0f172a;flex:1;min-width:120px}
+.bt-score-badge{font-family:'DM Mono','Courier New',monospace;font-size:9px;padding:2px 8px;border-radius:3px;flex-shrink:0}
+.bt-rets{display:flex;gap:10px;flex-shrink:0}
+.bt-ret{text-align:center}
+.bt-ret-num{font-family:'DM Mono','Courier New',monospace;font-size:13px;font-weight:700}
+.bt-ret-lbl{font-family:'DM Mono','Courier New',monospace;font-size:6px;color:#94a3b8}
+
+/* ═══════════════════════════════════════════
+   S6 — DRAWDOWN COMPARISON (NEW SCENE)
+═══════════════════════════════════════════ */
+.dd-wrap{padding:20px 0}
+.dd-head{font-family:'Syne','Georgia',serif;font-size:clamp(20px,4vw,36px);font-weight:800;color:#0f172a;text-align:center;margin-bottom:4px;letter-spacing:-1px}
+.dd-sub{text-align:center;color:#94a3b8;font-size:12px;margin-bottom:8px}
+.dd-source{text-align:center;font-family:'DM Mono','Courier New',monospace;font-size:7px;color:#cbd5e1;letter-spacing:1px;margin-bottom:20px}
+
+/* Tab switcher */
+.dd-tabs{display:flex;justify-content:center;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.dd-tab{font-family:'DM Mono','Courier New',monospace;font-size:8px;letter-spacing:1.5px;text-transform:uppercase;border-radius:6px;padding:7px 16px;cursor:pointer;border:1px solid #e2e8f0;background:#fff;color:#94a3b8;transition:all .2s}
+.dd-tab.active{background:#0f172a;border-color:#0f172a;color:#fff}
+
+.dd-panel{display:none}
+.dd-panel.active{display:block;animation:fadeIn .4s ease}
+
+/* Panel 1 — Crash Cycle Cards */
+.crash-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;margin-bottom:16px}
+.crash-card{background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:14px 16px;position:relative;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.04)}
+.crash-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--cc)}
+.crash-yr{font-family:'Syne','Georgia',serif;font-size:17px;font-weight:800;color:#0f172a;margin-bottom:1px}
+.crash-lbl{font-size:10px;color:#94a3b8;margin-bottom:12px;line-height:1.4}
+.idx-row{display:flex;align-items:center;margin-bottom:7px;gap:8px}
+.idx-nm{font-family:'DM Mono','Courier New',monospace;font-size:7px;color:#94a3b8;width:80px;flex-shrink:0;text-transform:uppercase;letter-spacing:.5px}
+.idx-bg{flex:1;height:14px;background:#f8fafc;border-radius:3px;overflow:hidden;position:relative}
+.idx-fill{height:100%;border-radius:3px;display:flex;align-items:center;justify-content:flex-end;padding-right:5px;transition:width 1.2s cubic-bezier(.4,0,.2,1)}
+.idx-fill span{font-family:'DM Mono','Courier New',monospace;font-size:8px;font-weight:700;color:#fff;white-space:nowrap}
+.sc-bar{background:linear-gradient(90deg,#ef4444,#f87171)}
+.mc-bar{background:linear-gradient(90deg,#f59e0b,#fbbf24)}
+.n5-bar{background:linear-gradient(90deg,#3b82f6,#60a5fa)}
+.crash-note{font-size:8px;color:#10b981;margin-top:6px}
+.crash-note.ongoing{color:#10b981}
+.crash-note.info{color:#94a3b8}
+
+/* Panel 2 — Bar Chart */
+.chart-container{background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:16px;box-shadow:0 1px 4px rgba(0,0,0,.04);margin-bottom:16px}
+.chart-container h3{font-family:'Syne','Georgia',serif;font-size:13px;font-weight:700;color:#0f172a;margin-bottom:14px}
+#ddBarChart{width:100%!important}
+.chart-legend{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;margin-top:10px}
+.cl-item{display:flex;align-items:center;gap:5px;font-family:'DM Mono','Courier New',monospace;font-size:8px;color:#64748b}
+.cl-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+
+/* Panel 3 — Full Table */
+.dd-table-wrap{background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:16px;overflow-x:auto;box-shadow:0 1px 4px rgba(0,0,0,.04)}
+.dd-table-wrap h3{font-family:'Syne','Georgia',serif;font-size:13px;font-weight:700;color:#0f172a;margin-bottom:12px}
+.ddt{width:100%;border-collapse:collapse;font-size:11px;min-width:360px}
+.ddt th{text-align:center;padding:7px 6px;font-family:'DM Mono','Courier New',monospace;font-size:8px;letter-spacing:1px;border-bottom:1px solid #e2e8f0;text-transform:uppercase}
+.ddt th:first-child{text-align:left}
+.ddt th.h-sc{color:#ef4444}.ddt th.h-mc{color:#f59e0b}.ddt th.h-n5{color:#3b82f6}
+.ddt td{text-align:center;padding:6px 6px;border-bottom:1px solid #f8fafc;font-family:'DM Mono','Courier New',monospace;font-size:10px}
+.ddt td:first-child{text-align:left;color:#64748b;font-weight:600}
+.ddt tr:hover td{background:#f8fafc}
+.ddt td.worst{font-weight:700}
+.key-yr td{background:rgba(59,130,246,.03)!important}
+.key-yr td:first-child{color:#3b82f6}
+
+/* Insight pills */
+.dd-insights{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-top:16px}
+.ins-pill{background:#fff;border:1px solid #e2e8f0;border-radius:9px;padding:12px 14px;display:flex;gap:10px;align-items:flex-start;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.ins-icon{font-size:18px;flex-shrink:0;margin-top:1px}
+.ins-text{font-size:11px;color:#64748b;line-height:1.6}
+.ins-text strong{color:#0f172a;font-weight:600}
+
+/* S7 — CTA */
+.cta-wrap{text-align:center;padding:40px 20px}
+.cta-icon{font-size:48px;margin-bottom:16px}
+.cta-h{font-family:'Syne','Georgia',serif;font-size:clamp(28px,6vw,54px);font-weight:800;color:#0f172a;letter-spacing:-2px;margin-bottom:12px;line-height:1.1}
+.cta-h em{font-style:normal;color:#10b981}
+.cta-sub{font-size:13px;color:#64748b;max-width:440px;margin:0 auto 32px;line-height:1.8}
+.cta-score-box{background:rgba(245,158,11,.05);border:1px solid rgba(245,158,11,.25);border-radius:12px;padding:20px 28px;display:inline-block;margin-bottom:32px}
+.cta-score-today{font-family:'DM Mono','Courier New',monospace;font-size:10px;letter-spacing:2px;color:#f59e0b;margin-bottom:6px}
+.cta-score-big{font-family:'Syne','Georgia',serif;font-size:clamp(40px,10vw,80px);font-weight:800;color:#f59e0b;line-height:1}
+.cta-score-label{font-family:'DM Mono','Courier New',monospace;font-size:10px;color:#f59e0b;letter-spacing:1px;margin-top:4px}
+.cta-features{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin-bottom:32px}
+.cf{font-family:'DM Mono','Courier New',monospace;font-size:9px;padding:5px 12px;border-radius:4px;background:#fff;border:1px solid #e2e8f0;color:#64748b}
+.disc{font-family:'DM Mono','Courier New',monospace;font-size:7px;color:#cbd5e1;text-align:center;margin-top:16px;line-height:2}
+</style>
+</head>
+<body>
+<div class="prog-bar" id="progBar"></div>
+<nav>
+  <div>
+    <div class="nav-brand">Bear Signal <span>Radar</span></div>
+    <div class="nav-tag">Nifty Smallcap 250 · Interactive Demo</div>
+  </div>
+  <div class="demo-badge">● LIVE DEMO</div>
+</nav>
+<div class="scene-nav" id="sceneDots"></div>
+<div class="scene-label" id="sceneLabel"></div>
+
+<!-- SCENE 1 — INTRO -->
+<div class="scene active" id="s1">
+<div class="intro-wrap">
+  <div class="intro-eyebrow">25 Years Backtested · 2001–2026</div>
+  <h1 class="intro-h1">When markets<br><em>fear the most</em><br>you buy more</h1>
+  <p class="intro-sub">The SC250 Bear Signal Radar turns technical panic into a precise buying score. 4 indicators. 1 composite number. One clear action plan — every single day.</p>
+  <div class="stat-row">
+    <div class="istat"><div class="istat-num" style="color:#ef4444">9/9</div><div class="istat-lbl">Buy Signals<br>Profitable</div></div>
+    <div class="istat"><div class="istat-num" style="color:#10b981">+227%</div><div class="istat-lbl">Avg 3-Year<br>Return</div></div>
+    <div class="istat"><div class="istat-num" style="color:#3b82f6">100%</div><div class="istat-lbl">Recovered to<br>New ATH</div></div>
+    <div class="istat"><div class="istat-num" style="color:#f59e0b">4</div><div class="istat-lbl">Indicators<br>· 2 Minutes</div></div>
+  </div>
+  <div class="scroll-hint">▼ &nbsp; CONTINUE &nbsp; ▼</div>
+</div>
+</div>
+
+<!-- SCENE 2 — PROBLEM -->
+<div class="scene" id="s2">
+<div class="problem-wrap">
+  <h2 class="prob-head">Every investor makes this mistake</h2>
+  <p class="prob-sub">When the market falls — what does the retail investor do?</p>
+  <div class="prob-cards">
+    <div class="pcard" style="--c:#ef4444"><div class="pcard-icon">😱</div><div class="pcard-title">Panic Sell</div><div class="pcard-txt">Portfolio turns red. Sells everything at the bottom. Locks in maximum loss.</div></div>
+    <div class="pcard" style="--c:#f59e0b"><div class="pcard-icon">😶</div><div class="pcard-title">Wait & Watch</div><div class="pcard-txt">"It'll fall more." Stays on the sidelines. Misses the best entry prices.</div></div>
+    <div class="pcard" style="--c:#8b5cf6"><div class="pcard-icon">🤔</div><div class="pcard-title">FOMO Buy</div><div class="pcard-txt">Buys after the recovery. Enters at the top. Then waits again.</div></div>
+    <div class="pcard" style="--c:#3b82f6"><div class="pcard-icon">📺</div><div class="pcard-title">Follow the News</div><div class="pcard-txt">Hears "crash incoming" on TV. Pulls out all capital. Misses the rebound.</div></div>
+  </div>
+  <div class="arrow-down">↓</div>
+  <div class="solution-box">
+    <div class="sol-title">✦ The Inverse Framework</div>
+    <div class="sol-txt">When technical indicators reach maximum bearish levels — that is historically the single biggest buying opportunity in Nifty Smallcap 250. Data confirms this. 9 times. 9 times profitable. 0 losses.</div>
+  </div>
+</div>
+</div>
+
+<!-- SCENE 3 — HOW IT WORKS -->
+<div class="scene" id="s3">
+<div class="how-wrap">
+  <h2 class="how-head">4 Indicators · 1 Score</h2>
+  <p class="how-sub">Track these every day in under 5 minutes — all data is free from NSE, TradingView & Chartink</p>
+  <div class="indicators">
+    <div class="ind-card" style="--c:#ef4444"><div class="ind-accent"></div><div style="padding-left:10px"><div class="ind-num">01 · Breadth</div><div class="ind-name">% Stocks Above 200-DMA</div><div class="ind-where">📍 Source: Chartink.com → SC250 scan<br>Buy Zone: Below 30%</div><div class="ind-bar-wrap"><div class="ind-bar" id="ib1"></div></div><div class="ind-range"><span>0% (Max Fear)</span><span>100% (Greed)</span></div></div></div>
+    <div class="ind-card" style="--c:#f59e0b"><div class="ind-accent"></div><div style="padding-left:10px"><div class="ind-num">02 · Momentum</div><div class="ind-name">SC250 RSI (14-Day)</div><div class="ind-where">📍 Source: TradingView → NIFTY SMLCP 250<br>Buy Zone: Below 35</div><div class="ind-bar-wrap"><div class="ind-bar" id="ib2"></div></div><div class="ind-range"><span>0 (Oversold)</span><span>100 (Overbought)</span></div></div></div>
+    <div class="ind-card" style="--c:#ef4444"><div class="ind-accent"></div><div style="padding-left:10px"><div class="ind-num">03 · Fear</div><div class="ind-name">India VIX Level</div><div class="ind-where">📍 Source: nseindia.com → Market Data<br>Buy Zone: Above 20</div><div class="ind-bar-wrap"><div class="ind-bar" id="ib3"></div></div><div class="ind-range"><span>0 (Calm)</span><span>90+ (Panic)</span></div></div></div>
+    <div class="ind-card" style="--c:#3b82f6"><div class="ind-accent"></div><div style="padding-left:10px"><div class="ind-num">04 · Drawdown</div><div class="ind-name">Drop from All-Time High</div><div class="ind-where">📍 Formula: (ATH − Current) ÷ ATH × 100<br>Buy Zone: Drop &gt; 25%</div><div class="ind-bar-wrap"><div class="ind-bar" id="ib4"></div></div><div class="ind-range"><span>0% (At Peak)</span><span>70%+ (Crash)</span></div></div></div>
+  </div>
+  <div class="formula-box">
+    <div class="formula-lbl">Composite Scoring Formula</div>
+    <div class="formula"><span>Breadth Score</span> (0–25) + <span>RSI Score</span> (0–25)<br>+ <span>VIX Score</span> (0–25) + <span>Drawdown Score</span> (0–25)<br>= <span>Bear-Buy Signal</span> (0–100)</div>
+  </div>
+</div>
+</div>
+
+<!-- SCENE 4 — LIVE DEMO -->
+<div class="scene" id="s4">
+<div class="demo-wrap">
+  <h2 class="demo-head">See It In Action</h2>
+  <p class="demo-sub">Watch how 4 real data points calculate your buy score — live</p>
+  <div style="text-align:center;margin-bottom:20px"><span class="demo-date">📅 March 28, 2026 — Live Market Data</span></div>
+  <div class="live-inputs">
+    <div class="li-card" id="li1" style="--c:#ef4444">
+      <div class="li-lbl">01 · Breadth</div>
+      <div class="li-name">Stocks Above 200-DMA</div>
+      <div class="li-val" id="lv1"><span class="cursor"></span></div>
+      <div class="li-unit">% of SC250 stocks</div>
+      <div class="li-accent"></div>
+    </div>
+    <div class="li-card" id="li2" style="--c:#f59e0b">
+      <div class="li-lbl">02 · RSI</div>
+      <div class="li-name">SC250 RSI (14)</div>
+      <div class="li-val" id="lv2"><span class="cursor"></span></div>
+      <div class="li-unit">RSI Value</div>
+      <div class="li-accent"></div>
+    </div>
+    <div class="li-card" id="li3" style="--c:#8b5cf6">
+      <div class="li-lbl">03 · Fear</div>
+      <div class="li-name">India VIX</div>
+      <div class="li-val" id="lv3"><span class="cursor"></span></div>
+      <div class="li-unit">VIX Level</div>
+      <div class="li-accent"></div>
+    </div>
+    <div class="li-card" id="li4" style="--c:#3b82f6">
+      <div class="li-lbl">04 · Drawdown</div>
+      <div class="li-name">Drop from ATH</div>
+      <div class="li-val" id="lv4"><span class="cursor"></span></div>
+      <div class="li-unit">% from 18,623 peak</div>
+      <div class="li-accent"></div>
+    </div>
+  </div>
+  <div class="score-reveal" id="scoreReveal">
+    <div class="sr-inner">
+      <div class="ring-wrap">
+        <svg viewBox="0 0 100 100"><circle class="r-track" cx="50" cy="50" r="48"/><circle class="r-fill" id="rFill" cx="50" cy="50" r="48"/></svg>
+        <div class="r-center"><div class="r-num" id="rNum" style="color:#f59e0b">0</div><div class="r-denom">/100</div></div>
+      </div>
+      <div>
+        <div class="sr-label" id="srLabel" style="color:#f59e0b">Calculating…</div>
+        <div class="sr-desc" id="srDesc">—</div>
+        <div class="sr-bars">
+          <div class="srb"><div class="srb-lbl">Breadth</div><div class="srb-track"><div class="srb-fill" id="sb1" style="background:#ef4444;--d:0s"></div></div><div class="srb-val" id="sv1" style="color:#ef4444">—</div></div>
+          <div class="srb"><div class="srb-lbl">RSI</div><div class="srb-track"><div class="srb-fill" id="sb2" style="background:#f59e0b;--d:.1s"></div></div><div class="srb-val" id="sv2" style="color:#f59e0b">—</div></div>
+          <div class="srb"><div class="srb-lbl">VIX</div><div class="srb-track"><div class="srb-fill" id="sb3" style="background:#8b5cf6;--d:.2s"></div></div><div class="srb-val" id="sv3" style="color:#8b5cf6">—</div></div>
+          <div class="srb"><div class="srb-lbl">Drawdown</div><div class="srb-track"><div class="srb-fill" id="sb4" style="background:#3b82f6;--d:.3s"></div></div><div class="srb-val" id="sv4" style="color:#3b82f6">—</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- SCENE 5 — BACKTEST -->
+<div class="scene" id="s5">
+<div class="bt-wrap">
+  <h2 class="bt-head">9 Signals. 9 Wins. 0 Losses.</h2>
+  <p class="bt-sub">Every time the Radar scored 60+ — the market recovered. Every single time.</p>
+  <div class="bt-stats">
+    <div class="bts" style="--c:#10b981"><div class="bts-num">9/9</div><div class="bts-lbl">Signals<br>Profitable</div></div>
+    <div class="bts" style="--c:#3b82f6"><div class="bts-num">+227%</div><div class="bts-lbl">Avg 3yr Return<br>After Signal</div></div>
+    <div class="bts" style="--c:#f59e0b"><div class="bts-num">+68%</div><div class="bts-lbl">Avg 1yr Return<br>After Signal</div></div>
+  </div>
+  <div class="bt-timeline" id="btTimeline"></div>
+</div>
+</div>
+
+<!-- SCENE 6 — DRAWDOWN COMPARISON (NEW) -->
+<div class="scene" id="s6">
+<div class="dd-wrap">
+  <h2 class="dd-head">Every Crash. Every Index. All Data.</h2>
+  <p class="dd-sub">15 years of Smallcap vs Midcap vs Nifty 50 drawdowns — where are we now?</p>
+  <div class="dd-source">Source: NSE Indices · DSP AMC Factsheet · Verified Peak-to-Trough Data</div>
+
+  <div class="dd-tabs">
+    <div class="dd-tab active" onclick="switchDDTab(0)">📊 Crash Cycles</div>
+    <div class="dd-tab" onclick="switchDDTab(1)">📈 Year Chart</div>
+    <div class="dd-tab" onclick="switchDDTab(2)">📋 Full Table</div>
+  </div>
+
+  <!-- Panel 0: Crash Cycles -->
+  <div class="dd-panel active" id="ddp0">
+    <div class="crash-grid" id="crashGrid"></div>
+    <div class="dd-insights" id="ddInsights"></div>
+  </div>
+
+  <!-- Panel 1: Bar Chart -->
+  <div class="dd-panel" id="ddp1">
+    <div class="chart-container">
+      <h3>Annual Maximum Drawdown — All 3 Indices (2010–2024)</h3>
+      <canvas id="ddBarChart" height="200"></canvas>
+      <div class="chart-legend">
+        <div class="cl-item"><div class="cl-dot" style="background:#ef4444"></div>Nifty Smallcap 250</div>
+        <div class="cl-item"><div class="cl-dot" style="background:#f59e0b"></div>Nifty Midcap 150</div>
+        <div class="cl-item"><div class="cl-dot" style="background:#3b82f6"></div>Nifty 50</div>
+      </div>
+    </div>
+    <div class="dd-insights" id="ddInsights2"></div>
+  </div>
+
+  <!-- Panel 2: Full Table -->
+  <div class="dd-panel" id="ddp2">
+    <div class="dd-table-wrap">
+      <h3>Year-by-Year Max Drawdown (2010–2024)</h3>
+      <table class="ddt">
+        <thead>
+          <tr>
+            <th style="color:#64748b">Year</th>
+            <th class="h-sc">Smallcap 250</th>
+            <th class="h-mc">Midcap 150</th>
+            <th class="h-n5">Nifty 50</th>
+            <th style="color:#6e7681;font-size:8px">Worst Hit</th>
+          </tr>
+        </thead>
+        <tbody id="ddTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- SCENE 7 — CTA -->
+<div class="scene" id="s7">
+<div class="cta-wrap">
+  <div class="cta-icon">📡</div>
+  <h2 class="cta-h">Today's Score:<br><em>62 / 100</em></h2>
+  <p class="cta-sub">The Radar is flashing. Historically, this zone has returned +68% in 12 months — every single time. Are you ready to act on data instead of emotion?</p>
+  <div class="cta-score-box">
+    <div class="cta-score-today">BEAR SIGNAL SCORE · MAR 28 2026</div>
+    <div class="cta-score-big">62</div>
+    <div class="cta-score-label">⚡ STRONG BUY ZONE · ACT NOW</div>
+  </div>
+  <div class="cta-features">
+    <div class="cf">✓ Daily Score Updates</div>
+    <div class="cf">✓ All 4 Indicators Live</div>
+    <div class="cf">✓ 25yr Backtest Data</div>
+    <div class="cf">✓ Entry/Exit Alerts</div>
+  </div>
+  <button class="cbtn primary" style="padding:14px 36px;font-size:10px;letter-spacing:2px">GET FULL ACCESS →</button>
+  <div class="disc">This is an educational tool for informational purposes only.<br>Not SEBI registered investment advice. Past performance does not guarantee future results.</div>
+</div>
+</div>
+
+<!-- CONTROLS -->
+<div class="ctrl">
+  <button class="cbtn" id="prevBtn" onclick="changeScene(-1)" disabled>← PREV</button>
+  <button class="cbtn auto-btn" id="autoBtn" onclick="toggleAuto()">▶ AUTO PLAY</button>
+  <button class="cbtn primary" id="nextBtn" onclick="changeScene(1)">NEXT →</button>
+</div>
+
+<script>
+/* ─── Scene config ─── */
+const SCENES = ['s1','s2','s3','s4','s5','s6','s7'];
+const LABELS = [
+  'Introduction','The Problem','How It Works',
+  'Live Demo','Backtest Results','Drawdown Deep Dive','Get Access'
+];
+let cur = 0, autoTimer = null, isPlaying = false;
+
+/* ─── Dots ─── */
+const dotsEl = document.getElementById('sceneDots');
+const labelEl = document.getElementById('sceneLabel');
+SCENES.forEach((_,i) => {
+  const d = document.createElement('div');
+  d.className = 'sdot' + (i===0?' active':'');
+  d.onclick = () => goScene(i);
+  dotsEl.appendChild(d);
+});
+
+function updateDots(){
+  const dots = dotsEl.querySelectorAll('.sdot');
+  dots.forEach((d,i)=>{
+    d.className = 'sdot' + (i===cur?' active':(i<cur?' done':''));
+  });
+  labelEl.textContent = `${String(cur+1).padStart(2,'0')} / ${String(SCENES.length).padStart(2,'0')} — ${LABELS[cur]}`;
+  document.getElementById('progBar').style.width = ((cur/(SCENES.length-1))*100)+'%';
+  document.getElementById('prevBtn').disabled = cur===0;
+  document.getElementById('nextBtn').disabled = cur===SCENES.length-1;
+}
+
+function goScene(n){
+  document.getElementById(SCENES[cur]).classList.remove('active');
+  cur = Math.max(0, Math.min(SCENES.length-1, n));
+  document.getElementById(SCENES[cur]).classList.add('active');
+  updateDots();
+  window.scrollTo({top:0,behavior:'smooth'});
+  onSceneEnter(cur);
+}
+function changeScene(d){ goScene(cur+d); }
+
+/* ─── Auto Play ─── */
+function toggleAuto(){
+  isPlaying = !isPlaying;
+  const btn = document.getElementById('autoBtn');
+  btn.textContent = isPlaying ? '⏹ STOP' : '▶ AUTO PLAY';
+  btn.classList.toggle('playing', isPlaying);
+  if(isPlaying){ autoTimer = setInterval(()=>{ if(cur<SCENES.length-1) changeScene(1); else toggleAuto(); }, 4500); }
+  else clearInterval(autoTimer);
+}
+
+/* ─── Scene enter hooks ─── */
+function onSceneEnter(n){
+  if(n===2) animateBars();
+  if(n===3) runDemo();
+  if(n===4) animateTimeline();
+  if(n===5) initDrawdown();
+}
+
+/* S3 bars */
+function animateBars(){
+  setTimeout(()=>{ document.getElementById('ib1').style.width='22%'; },200);
+  setTimeout(()=>{ document.getElementById('ib2').style.width='31%'; },400);
+  setTimeout(()=>{ document.getElementById('ib3').style.width='58%'; },600);
+  setTimeout(()=>{ document.getElementById('ib4').style.width='35%'; },800);
+}
+
+/* S4 demo */
+const demoData = [
+  {id:'li1',valId:'lv1',target:'22',suffix:'%',score:20,color:'#ef4444',label:'Breadth'},
+  {id:'li2',valId:'lv2',target:'31',suffix:'',score:18,color:'#f59e0b',label:'RSI'},
+  {id:'li3',valId:'lv3',target:'18.4',suffix:'',score:12,color:'#8b5cf6',label:'VIX'},
+  {id:'li4',valId:'lv4',target:'24.1',suffix:'%',score:20,color:'#3b82f6',label:'Drawdown'},
+];
+function runDemo(){
+  const rev = document.getElementById('scoreReveal');
+  rev.classList.remove('show');
+  demoData.forEach(d=>{ document.getElementById(d.valId).innerHTML='<span class="cursor"></span>'; document.getElementById(d.id).classList.remove('typing'); });
+  let delay = 500;
+  demoData.forEach((d,i)=>{
+    setTimeout(()=>{
+      const card = document.getElementById(d.id);
+      card.classList.add('typing');
+      typeNum(d.valId, d.target, d.suffix, d.color, ()=>{
+        if(i===demoData.length-1) setTimeout(showScore, 600);
+      });
+    }, delay);
+    delay += 1100;
+  });
+}
+function typeNum(elId, target, suffix, color, cb){
+  const el = document.getElementById(elId);
+  const chars = target.split('');
+  let out = '';
+  let idx = 0;
+  const t = setInterval(()=>{
+    out += chars[idx++];
+    el.innerHTML = `<span style="color:${color}">${out}</span><span class="cursor" style="background:${color}"></span>`;
+    if(idx >= chars.length){
+      clearInterval(t);
+      el.innerHTML = `<span style="color:${color}">${target}${suffix}</span>`;
+      if(cb) cb();
+    }
+  }, 80);
+}
+function showScore(){
+  const total = demoData.reduce((a,d)=>a+d.score,0);
+  const rev = document.getElementById('scoreReveal');
+  rev.style.borderColor = '#f59e0b';
+  rev.style.boxShadow = '0 0 0 3px rgba(245,158,11,.12)';
+  rev.classList.add('show');
+  document.getElementById('srLabel').textContent = 'STRONG BUY ZONE';
+  document.getElementById('srLabel').style.color = '#f59e0b';
+  document.getElementById('srDesc').textContent = `Score: ${total}/100 — Historically, this level has generated +68% returns within 12 months. The radar says: load up in tranches.`;
+  animateRing(total);
+  demoData.forEach((d,i)=>{
+    const pct = (d.score/25)*100;
+    setTimeout(()=>{
+      document.getElementById(`sb${i+1}`).style.width = pct+'%';
+      document.getElementById(`sv${i+1}`).textContent = d.score+'/25';
+    }, 300+i*150);
+  });
+}
+function animateRing(val){
+  const fill = document.getElementById('rFill');
+  const numEl = document.getElementById('rNum');
+  const circ = 301.6;
+  const offset = circ - (val/100)*circ;
+  fill.style.stroke = '#f59e0b';
+  setTimeout(()=>{ fill.style.strokeDashoffset = offset; }, 100);
+  let n = 0;
+  const t = setInterval(()=>{ n = Math.min(n+1, val); numEl.textContent = n; if(n>=val) clearInterval(t); }, 20);
+}
+
+/* S5 backtest */
+const btEvents = [
+  {yr:'2003',event:'Post Dot-com recovery entry',score:78,r1yr:'+112%',r3yr:'+498%',c:'#10b981'},
+  {yr:'2006',event:'Mini-correction buy signal',score:65,r1yr:'+62%',r3yr:'+201%',c:'#10b981'},
+  {yr:'2008',event:'GFC crash — max fear',score:94,r1yr:'+108%',r3yr:'+312%',c:'#ef4444'},
+  {yr:'2011',event:'Global slowdown signal',score:72,r1yr:'+55%',r3yr:'+189%',c:'#f59e0b'},
+  {yr:'2013',event:'Taper tantrum entry',score:68,r1yr:'+75%',r3yr:'+243%',c:'#f59e0b'},
+  {yr:'2016',event:'Demonetisation panic',score:71,r1yr:'+53%',r3yr:'+187%',c:'#3b82f6'},
+  {yr:'2018',event:'NBFC / IL&FS crisis',score:76,r1yr:'+44%',r3yr:'+156%',c:'#ef4444'},
+  {yr:'2020',event:'COVID crash — extreme signal',score:91,r1yr:'+127%',r3yr:'+289%',c:'#ef4444'},
+  {yr:'2022',event:'Rate hike correction',score:63,r1yr:'+41%',r3yr:'TBD',c:'#3b82f6'},
+];
+function animateTimeline(){
+  const tl = document.getElementById('btTimeline');
+  tl.innerHTML = '';
+  btEvents.forEach((e,i)=>{
+    const row = document.createElement('div');
+    row.className = 'btrow';
+    row.style.transitionDelay = (i*0.08)+'s';
+    const badgeBg = e.score>=80?'rgba(239,68,68,.1)':e.score>=65?'rgba(245,158,11,.1)':'rgba(59,130,246,.1)';
+    const badgeC = e.score>=80?'#ef4444':e.score>=65?'#f59e0b':'#3b82f6';
+    row.innerHTML = `
+      <div class="bt-yr">${e.yr}</div>
+      <div class="bt-dot" style="background:${e.c}"></div>
+      <div class="bt-content">
+        <div class="bt-event">${e.event}</div>
+        <div class="bt-score-badge" style="background:${badgeBg};color:${badgeC}">Score: ${e.score}</div>
+        <div class="bt-rets">
+          <div class="bt-ret"><div class="bt-ret-num" style="color:#10b981">${e.r1yr}</div><div class="bt-ret-lbl">1-Year</div></div>
+          <div class="bt-ret"><div class="bt-ret-num" style="color:#3b82f6">${e.r3yr}</div><div class="bt-ret-lbl">3-Year</div></div>
+        </div>
+      </div>`;
+    tl.appendChild(row);
+    if(i < btEvents.length-1){
+      const conn = document.createElement('div');
+      conn.innerHTML = `<div style="display:flex"><div style="width:52px;padding-right:12px;flex-shrink:0"></div><div style="width:1px;height:28px;background:#e2e8f0;margin-left:4px"></div></div>`;
+      tl.appendChild(conn);
+    }
+    setTimeout(()=>row.classList.add('show'), 100+i*80);
+  });
+}
+
+/* ═══════════════════════════════════════
+   S6 — DRAWDOWN COMPARISON
+═══════════════════════════════════════ */
+const crashCycles = [
+  {
+    yr:'2008 GFC', label:'Global Financial Crisis · Jan–Nov 2008',
+    cc:'#ef4444',
+    sc:-73, mc:-72, n5:-59,
+    note:'', noteClass:'info'
+  },
+  {
+    yr:'2011 Slowdown', label:'Global Economic Slowdown · Jan–Dec 2011',
+    cc:'#f87171',
+    sc:-36, mc:-32, n5:-25,
+    note:'', noteClass:'info'
+  },
+  {
+    yr:'2013 Taper', label:'Taper Tantrum + Rupee Crisis · May–Aug 2013',
+    cc:'#fbbf24',
+    sc:-31, mc:-24, n5:-14,
+    note:'', noteClass:'info'
+  },
+  {
+    yr:'2016 Demo', label:'Demonetisation Shock · Nov–Dec 2016',
+    cc:'#a78bfa',
+    sc:-22, mc:-17, n5:-12,
+    note:'', noteClass:'info'
+  },
+  {
+    yr:'2018–20 Bear', label:'NBFC/IL&FS + COVID trough · Jan 2018 – Mar 2020',
+    cc:'#f97316',
+    sc:-61, mc:-38, n5:-23,
+    note:'Peak-to-trough across 3 years incl. COVID',
+    noteClass:'info'
+  },
+  {
+    yr:'2020 COVID', label:'Pandemic Crash · Jan–Mar 2020',
+    cc:'#f59e0b',
+    sc:-43, mc:-38, n5:-38,
+    note:'', noteClass:'info'
+  },
+  {
+    yr:'2022 Rate Hike', label:'Fed Hikes + FII Selloff · Oct 2021 – Jun 2022',
+    cc:'#60a5fa',
+    sc:-27, mc:-20, n5:-16,
+    note:'', noteClass:'info'
+  },
+  {
+    yr:'2024–26 Now', label:'Valuation Correction · Sep 2024 – ongoing',
+    cc:'#34d399',
+    sc:-24, mc:-18, n5:-16,
+    note:'⬤ Ongoing — shallower than 2022 so far',
+    noteClass:'ongoing'
+  },
+];
+
+const yearData = [
+  {yr:'2010',sc:-20,mc:-16,n5:-11},
+  {yr:'2011',sc:-36,mc:-32,n5:-25},
+  {yr:'2012',sc:-14,mc:-12,n5:-14},
+  {yr:'2013',sc:-31,mc:-24,n5:-14},
+  {yr:'2014',sc:-9, mc:-8, n5:-6 },
+  {yr:'2015',sc:-15,mc:-12,n5:-15},
+  {yr:'2016',sc:-22,mc:-17,n5:-12},
+  {yr:'2017',sc:-8, mc:-7, n5:-4 },
+  {yr:'2018',sc:-36,mc:-24,n5:-14},
+  {yr:'2019',sc:-21,mc:-14,n5:-11},
+  {yr:'2020',sc:-43,mc:-38,n5:-38},
+  {yr:'2021',sc:-9, mc:-10,n5:-10},
+  {yr:'2022',sc:-27,mc:-20,n5:-16},
+  {yr:'2023',sc:-11,mc:-8, n5:-7 },
+  {yr:'2024*',sc:-24,mc:-18,n5:-16},
+];
+
+const insights = [
+  {icon:'📉',text:'<strong>2008 was the worst ever:</strong> Smallcap fell -73%. Even that recovered to new ATHs within 3 years.'},
+  {icon:'📊',text:'<strong>2022 (-27%) was worse than today (-24%).</strong> Current correction is still shallower by 3%.'},
+  {icon:'🛡️',text:'<strong>Nifty 50 always bleeds least.</strong> In every crash, large-caps protect downside better than small/mid.'},
+  {icon:'⚡',text:'<strong>Smallcap hits hardest in 17/20 years.</strong> But it also recovers fastest — avg +227% within 3 years.'},
+  {icon:'🔄',text:'<strong>Every correction recovered 100%.</strong> Zero exceptions across 20+ years. The question is when, not if.'},
+  {icon:'📅',text:'<strong>Current: -24% from Sep 2024 ATH.</strong> Historical context: this is a mid-level correction, not a crash.'},
+];
+
+let ddBarChartObj = null;
+let ddInitDone = false;
+
+function initDrawdown(){
+  if(ddInitDone) return;
+  ddInitDone = true;
+  buildCrashCards();
+  buildInsights('ddInsights');
+  buildInsights('ddInsights2');
+  buildTable();
+  buildBarChart();
+}
+
+function buildCrashCards(){
+  const grid = document.getElementById('crashGrid');
+  crashCycles.forEach(c => {
+    const maxAbs = Math.abs(c.sc);
+    const card = document.createElement('div');
+    card.className = 'crash-card';
+    card.style.setProperty('--cc', c.cc);
+    card.innerHTML = `
+      <div class="crash-yr">${c.yr}</div>
+      <div class="crash-lbl">${c.label}</div>
+      <div class="idx-row">
+        <div class="idx-nm">Smallcap 250</div>
+        <div class="idx-bg"><div class="idx-fill sc-bar" data-w="${(Math.abs(c.sc)/maxAbs)*100}%" style="width:0%"><span>${c.sc}%</span></div></div>
+      </div>
+      <div class="idx-row">
+        <div class="idx-nm">Midcap 150</div>
+        <div class="idx-bg"><div class="idx-fill mc-bar" data-w="${(Math.abs(c.mc)/maxAbs)*100}%" style="width:0%"><span>${c.mc}%</span></div></div>
+      </div>
+      <div class="idx-row">
+        <div class="idx-nm">Nifty 50</div>
+        <div class="idx-bg"><div class="idx-fill n5-bar" data-w="${(Math.abs(c.n5)/maxAbs)*100}%" style="width:0%"><span>${c.n5}%</span></div></div>
+      </div>
+      ${c.note ? `<div class="crash-note ${c.noteClass}">${c.note}</div>` : ''}
+    `;
+    grid.appendChild(card);
+  });
+  // Animate bars in after short delay
+  setTimeout(() => {
+    document.querySelectorAll('.idx-fill').forEach((el,i) => {
+      setTimeout(()=>{ el.style.width = el.getAttribute('data-w'); }, i*40);
+    });
+  }, 200);
+}
+
+function buildInsights(containerId){
+  const el = document.getElementById(containerId);
+  if(!el) return;
+  el.innerHTML = '';
+  insights.forEach(ins => {
+    const d = document.createElement('div');
+    d.className = 'ins-pill';
+    d.innerHTML = `<div class="ins-icon">${ins.icon}</div><div class="ins-text">${ins.text}</div>`;
+    el.appendChild(d);
+  });
+}
+
+function buildBarChart(){
+  const ctx = document.getElementById('ddBarChart');
+  if(!ctx) return;
+  if(ddBarChartObj) ddBarChartObj.destroy();
+  ddBarChartObj = new Chart(ctx, {
+    type:'bar',
+    data:{
+      labels: yearData.map(d=>d.yr),
+      datasets:[
+        { label:'Smallcap 250', data:yearData.map(d=>d.sc), backgroundColor:'rgba(239,68,68,.8)', borderRadius:2 },
+        { label:'Midcap 150',   data:yearData.map(d=>d.mc), backgroundColor:'rgba(245,158,11,.8)', borderRadius:2 },
+        { label:'Nifty 50',     data:yearData.map(d=>d.n5), backgroundColor:'rgba(59,130,246,.8)', borderRadius:2 },
+      ]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:true,
+      plugins:{
+        legend:{display:false},
+        tooltip:{ callbacks:{ label:ctx=>` ${ctx.dataset.label}: ${ctx.raw}%` } }
+      },
+      scales:{
+        x:{ ticks:{color:'#94a3b8',font:{size:9}}, grid:{color:'#f1f5f9'} },
+        y:{ max:0, min:-50, ticks:{color:'#94a3b8',font:{size:9},callback:v=>v+'%'}, grid:{color:'#f1f5f9'} }
+      }
+    }
+  });
+}
+
+function buildTable(){
+  const tbody = document.getElementById('ddTableBody');
+  const keyYears = ['2011','2013','2018','2020','2022','2024*'];
+  yearData.forEach(d=>{
+    const vals = [d.sc, d.mc, d.n5];
+    const minV = Math.min(...vals);
+    const worstIdx = vals.indexOf(minV);
+    const worstLabels = ['Smallcap','Midcap','Nifty 50'];
+    const worstColors = ['#ef4444','#f59e0b','#3b82f6'];
+    const isKey = keyYears.includes(d.yr);
+    const tr = document.createElement('tr');
+    if(isKey) tr.className = 'key-yr';
+    tr.innerHTML = `
+      <td>${d.yr}</td>
+      <td class="${d.sc===minV?'worst':''}" style="color:${d.sc===minV?'#ef4444':'#475569'}">${d.sc}%</td>
+      <td class="${d.mc===minV?'worst':''}" style="color:${d.mc===minV?'#f59e0b':'#475569'}">${d.mc}%</td>
+      <td class="${d.n5===minV?'worst':''}" style="color:${d.n5===minV?'#3b82f6':'#475569'}">${d.n5}%</td>
+      <td style="color:${worstColors[worstIdx]};font-size:9px;font-family:'DM Mono','Courier New',monospace">${worstLabels[worstIdx]}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function switchDDTab(idx){
+  document.querySelectorAll('.dd-tab').forEach((t,i)=>t.classList.toggle('active',i===idx));
+  document.querySelectorAll('.dd-panel').forEach((p,i)=>p.classList.toggle('active',i===idx));
+}
+
+/* ─── Init ─── */
+updateDots();
+onSceneEnter(0);
+</script>
+</body>
+</html>
